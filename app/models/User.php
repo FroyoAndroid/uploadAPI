@@ -9,7 +9,7 @@ class User extends Eloquent {
 	 *
 	 * @var string
 	 */
-	protected $table = 'users';
+	protected $table = 'amasi_users';
 
 	/**
 	 * The attributes excluded from the model's JSON form.
@@ -17,4 +17,11 @@ class User extends Eloquent {
 	 * @var array
 	 */
 	protected $hidden = array('password');
+
+    /**
+     * Indicates if the model should be timestamped.
+     *
+     * @var bool
+     */
+    public $timestamps = false;
 }
