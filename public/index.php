@@ -24,6 +24,30 @@ $app->get('/', function() use($app){
 //    echo $alluser->toJson();
 });
 
+$app->post('/check/user', function() use($app){
+    try{
+        //$app->response->headers->set('Content-Type', 'application/json');
+        $result = array();
+        $allPostVars = $app->request->post();
+        $data = User::where('email',$allPostVars['email'])->first();
+        if($data){
+            $result["status"] = "success";
+        }else{
+            $result["status"] = "success";
+            $result["data"] = $data;
+        }
+        print_r(json_encode($result));
+
+    }catch (Exception $error){
+        $result = [
+            "status" => "error",
+            "message" => print($error->getMessage())
+        ];
+        print(json_encode($result));
+    }
+
+});
+
 $app->post('/create/user', function() use($app){
 
     try{
@@ -64,7 +88,7 @@ $app->post('/create/user', function() use($app){
 });
 
 $app->post('/upload/image',function() use($app){
-    //$app->response()->header("Content-Type", "application/json");
+    $app->response()->header("Content-Type", "application/json");
     if (!isset($_FILES['uploads'])) {
         echo "No files uploaded!!";
         return;
@@ -110,6 +134,9 @@ $app->post('/upload/image',function() use($app){
 });
 
 $app->post('/upload/video',function() use($app){
+	
+	ini_set('upload_max_filesize', '2000M');
+	echo ini_get('upload_max_filesize');
     //$app->response()->header("Content-Type", "application/json");
     if (!isset($_FILES['uploads'])) {
         echo "No files uploaded!!";
