@@ -1,8 +1,14 @@
 <?php
+//header('Access-Control-Allow-Origin: *');
+//header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 
 require __DIR__.'/../vendor/autoload.php';
 
 $app = new Slim\Slim();
+$app->response()->headers->set('Access-Control-Allow-Headers', 'Content-Type');
+//$app->response()->headers->set('Content-Type', 'application/form-data');
+$app->response()->headers->set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+$app->response()->headers->set('Access-Control-Allow-Origin', '*');
 
 $app->get('/', function() use($app){
     $app->response->headers->set('Content-Type','application/json');
@@ -51,7 +57,7 @@ $app->post('/check/user', function() use($app){
 $app->post('/create/user', function() use($app){
 
     try{
-        $app->response->headers->set('Content-Type', 'application/json');
+        //$app->response->headers->set('Content-Type', 'application/json');
         $allPostVars = $app->request->post();
         $user = new User;
         $user->first_name = $allPostVars["first_name"];
@@ -72,12 +78,14 @@ $app->post('/create/user', function() use($app){
 
         };
     }catch(Exception $error){
-
-        $result = [
-            "status" => "error",
-            "message" => print($error->getMessage())
-        ];
-        print(json_encode($result));
+        
+        print_r($allPostVars);
+        echo $error;
+        // $result = [
+        //     "status" => "error",
+        //     "message" => print($error->getMessage())
+        // ];
+        // print(json_encode($result));
 
     }
 
