@@ -6,48 +6,40 @@ require __DIR__.'/../vendor/autoload.php';
 
 $app = new Slim\Slim();
 $app->response()->headers->set('Access-Control-Allow-Headers', 'Content-Type');
-//$app->response()->headers->set('Content-Type', 'application/form-data');
-$app->response()->headers->set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+$app->response()->headers->set('Access-Control-Allow-Methods', 'GET, POST');
 $app->response()->headers->set('Access-Control-Allow-Origin', '*');
 
 $app->get('/', function() use($app){
     $app->response->headers->set('Content-Type','application/json');
-    $user = new User;
-    $user->first_name = "Test2";
-    $user->last_name = "Test2";
-    $user->password = md5('admin');
-    $user->email = "tes2t@test.com";
-    $user->city = "WEst Asia";
-    $user->age = 34;
-    $user->role = "AGENT";
-    $user->time_stamp = date('Y-m-d H:i:s');
-    echo $user->save();
-//    $user = new User;
+//        $user = new User;
 //    $user->username = "Test User2";
 //   echo $user->save();
-//    $alluser = User::all();
+    $alluser = User::all();
 //    $alluser = User::where('first_name','niraj')->first();
-//    echo $alluser->toJson();
+    echo $alluser->toJson();
 });
 
 $app->post('/check/user', function() use($app){
     try{
-        //$app->response->headers->set('Content-Type', 'application/json');
+        $app->response->headers->set('Content-Type', 'application/json');
         $result = array();
-        $allPostVars = $app->request->post();
-        $data = User::where('email',$allPostVars['email'])->first();
+        $json = $app->request->getBody();
+        $allPostVars = json_decode($json, true);
+        $data = User::where('email',$allPostVars['email'])->where('password',md5($allPostVars['password']))->first();
         if($data){
             $result["status"] = "success";
+            $result["data"] = json_decode($data->toJson());
         }else{
-            $result["status"] = "success";
-            $result["data"] = $data;
+            $result["status"] = "error";
+            $result["data"] = "Incorrect Credential.";
         }
         print_r(json_encode($result));
 
     }catch (Exception $error){
         $result = [
             "status" => "error",
-            "message" => print($error->getMessage())
+            "message" => "Incorrect Credential.",
+            "error" => $error->getMessage()
         ];
         print(json_encode($result));
     }
@@ -57,8 +49,10 @@ $app->post('/check/user', function() use($app){
 $app->post('/create/user', function() use($app){
 
     try{
-        //$app->response->headers->set('Content-Type', 'application/json');
-        $allPostVars = $app->request->post();
+        $app->response->headers->set('Content-Type', 'application/json');
+        $json = $app->request->getBody();
+        $allPostVars = json_decode($json, true); // parse the JSON into an associative array
+//      $allPostVars = $app->request->post(); if the data is coming through form-data
         $user = new User;
         $user->first_name = $allPostVars["first_name"];
         $user->last_name = $allPostVars["last_name"];
@@ -69,30 +63,19 @@ $app->post('/create/user', function() use($app){
         $user->role = "GENERAL";
         $user->time_stamp = date('Y-m-d H:i:s');
         if(($user->save()) > 0){
-
             $result = [
                 "status" => "success",
                 "message" => "User Created"
             ];
             print(json_encode($result));
-
         };
     }catch(Exception $error){
-        
-        print_r($allPostVars);
-        echo $error;
-        // $result = [
-        //     "status" => "error",
-        //     "message" => print($error->getMessage())
-        // ];
-        // print(json_encode($result));
-
+         $result = [
+             "status" => "error",
+             "message" => $error->getMessage()
+         ];
+         print(json_encode($result));
     }
-
-//    $matchThese = ['email' => $allPostVars['email'], 'password' => md5($allPostVars['password'])];
-//    $results = User::where($matchThese)->get();
-//    echo $results->toJson();
-//    print_r($allPostVars);
 });
 
 $app->post('/upload/image',function() use($app){
