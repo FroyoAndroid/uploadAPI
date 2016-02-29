@@ -1,8 +1,8 @@
 <?php
-//header('Access-Control-Allow-Origin: *');
-//header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 
 require __DIR__.'/../vendor/autoload.php';
+$config = require __DIR__.'/../app/s3_config.php';
+print_r($config);
 
 $app = new Slim\Slim();
 $app->response()->headers->set('Access-Control-Allow-Headers', 'Content-Type');
@@ -10,13 +10,92 @@ $app->response()->headers->set('Access-Control-Allow-Methods', 'GET, POST');
 $app->response()->headers->set('Access-Control-Allow-Origin', '*');
 
 $app->get('/', function() use($app){
-    $app->response->headers->set('Content-Type','application/json');
+    echo "\nhello";
+   /* try{
+        $app->response->headers->set('Content-Type','application/json');
+        $alluser = User::all();
+
+        if($alluser){
+            $result = [
+                "status" => "success",
+                "data" => json_decode($alluser->toJson())
+            ];
+
+        }else{
+            $result = [
+                "status" => "success",
+                "data" => "No Data"
+            ];
+        }
+        print(json_encode($result));
+    }catch(Exception $error){
+        print_r($error);
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }*/
+
 //        $user = new User;
 //    $user->username = "Test User2";
 //   echo $user->save();
-    $alluser = User::all();
+//    $alluser = User::all();
 //    $alluser = User::where('first_name','niraj')->first();
-    echo $alluser->toJson();
+//    echo $alluser->toJson();
+});
+$app->get('/news',function() use($app){
+    try{
+        $app->response->headers->set('Content-Type', 'application/json');
+        $allnews = News::all();
+
+        if($allnews){
+            $result = [
+                "status" => "success",
+                "data" => json_decode($allnews->toJson())
+            ];
+
+        }else{
+            $result = [
+                "status" => "success",
+                "data" => "No Data"
+            ];
+        }
+        print(json_encode($result));
+    }catch (Exception $error){
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+});
+
+$app->post('/create/news',function() use($app){
+    try{
+        $app->response->headers->set('Content-Type', 'application/json');
+        $json = $app->request->getBody();
+        $allPostVars = json_decode($json, true); // parse the JSON into an associative array
+        $news = new News;
+        $news->news_id =  uniqid('news-'.date('Ymd').'-');
+        $news->news_title = $allPostVars['news_title'];
+        $news->news_content = $allPostVars['news_content'];
+        $news->news_img = $allPostVars['img_name'];
+        $news->likes = 0;
+        if(($news->save()) > 0){
+            $result = [
+                "status" => "success",
+                "message" => "News Created"
+            ];
+            print(json_encode($result));
+        };
+    }catch (Exception $error){
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
 });
 
 $app->post('/check/user', function() use($app){

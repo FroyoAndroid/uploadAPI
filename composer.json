@@ -1,10 +1,11 @@
 {
     "require": {
         "slim/slim": "2.*",
-        "illuminate/database": "*"
+        "illuminate/database": "*",
+        "aws/aws-sdk-php": "*"
     },
     "autoload": {
-        "files": [ "app/config.php" ],
+        "files": [ "app/config.php", "app/s3_config.php"],
         "classmap": [ "app/models" ]
     }
 }

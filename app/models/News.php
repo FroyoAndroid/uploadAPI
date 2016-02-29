@@ -12,4 +12,13 @@ class News extends Eloquent {
      * @var bool
      */
     public $timestamps = true;
+
+    public function comments()
+    {
+        return $this->hasMany('Comment');
+    }
+
+    public function getComments(){
+       return Comment::orderBy('updated_at', 'desc')->where('news_id',$this->id)->get();
+    }
 }
