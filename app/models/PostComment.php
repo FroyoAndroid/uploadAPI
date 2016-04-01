@@ -1,8 +1,8 @@
 <?php
 use Illuminate\Database\Eloquent\Model as Eloquent;
 
-class Comment extends Eloquent{
-    protected $table = 'comment_news';
+class PostComment extends Eloquent{
+    protected $table = 'comment_post';
 
     /**
      * Indicates if the model should be timestamped.
@@ -11,7 +11,7 @@ class Comment extends Eloquent{
      */
     public $timestamps = true;
 
-    public function User(){
+    public function user(){
         return $this->belongsTo('User');
     }
 

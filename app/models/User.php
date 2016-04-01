@@ -24,4 +24,13 @@ class User extends Eloquent {
      * @var bool
      */
     public $timestamps = false;
+
+    public function Comments(){
+        return $this->hasMany('Comment','user_id');
+    }
+
+    public function PostComments(){
+        return $this->hasMany('PostComment','user_id');
+    }
+
 }

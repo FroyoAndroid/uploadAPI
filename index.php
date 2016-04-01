@@ -23,9 +23,9 @@ $app = new Slim\Slim();
 $app->response()->headers->set('Access-Control-Allow-Headers', 'Content-Type');
 $app->response()->headers->set('Access-Control-Allow-Methods', 'GET, POST');
 $app->response()->headers->set('Access-Control-Allow-Origin', '*');
+$app->response->header('charset', 'utf-8');
 
-
-$app->get('/', function () use ($app) {
+$app->get('/users', function () use ($app) {
     try {
         $app->response->headers->set('Content-Type', 'application/json');
         $alluser = User::all();
@@ -60,6 +60,7 @@ $app->get('/', function () use ($app) {
 //    echo $alluser->toJson();
 });
 
+/*This will get all the news based on dates descending*/
 $app->get('/news', function () use ($app) {
     try {
         $app->response->headers->set('Content-Type', 'application/json');
@@ -87,17 +88,143 @@ $app->get('/news', function () use ($app) {
     }
 });
 
+/*This will get all the news details related to the news/id along with comments on that news*/
 $app->get('/news/:newsId', function ($newsId) use ($app) {
     try {
-       $app->response->headers->set('Content-Type', 'application/json');
-        $allnews = News::where('id',$newsId)->first();
+        $commentsArray = array();
+        $app->response->headers->set('Content-Type', 'application/json');
+        $allnews = News::where('id', $newsId)->first();
         if ($allnews) {
             $comments = News::find($newsId)->getComments();
+            foreach($comments as $comment){
+                array_push($commentsArray,array(
+                    'comment'=> $comment->comment,
+                    //'username' => $comment->User->first_name . '' .$comment->User->last_name,
+                    'updated_at' => $comment->updated_at,
+                    'user' =>(object) $comment->getUser()->first()
+                ));
+
+            }
+
             $result = [
                 "status" => "success",
-                "data" => array( 'news' => json_decode($allnews->toJson()) , 'comments' =>json_decode($comments->toJson()) )
+                "data" => array('news' => json_decode($allnews->toJson()), 'comments' => json_decode(json_encode($commentsArray)))
             ];
 
+        } else {
+            $result = [
+                "status" => "error",
+                "message" => "No Data"
+            ];
+        }
+        print(json_encode($result));
+    } catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+});
+
+$app->get('/video/:eventId', function ($eventId) use ($app) {
+    try {
+        $app->response->headers->set('Content-Type', 'application/json');
+        $allVideo = Post::select('id','post_title','likes')->where('event_id', $eventId)->get();
+        if ($allVideo) {
+            $result = [
+                "status" => "success",
+                "data" => json_decode($allVideo->toJson())
+            ];
+        } else {
+            $result = [
+                "status" => "error",
+                "message" => "No Data"
+            ];
+        }
+        print(json_encode($result));
+    } catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+});
+
+
+$app->get('/video/detail/:videoId', function ($videoId) use ($app) {
+    try {
+        $app->response->headers->set('Content-Type', 'application/json');
+        $allVideo = Post::select('id','post_title','video_src','likes')->where('id', $videoId)->get();
+        $commentsArray = array();
+        if ($allVideo) {
+            $comments = Post::find($videoId)->getComments();
+            foreach($comments as $comment){
+                array_push($commentsArray,array(
+                    'comment'=> $comment->comment,
+                    'updated_at' => $comment->updated_at,
+                    'user' =>(object) $comment->getUser()->first()
+                ));
+
+            }
+            $result = [
+                "status" => "success",
+                "data" => array('video' => json_decode($allVideo->toJson()), 'comments' => json_decode(json_encode($commentsArray)))
+            ];
+        } else {
+            $result = [
+                "status" => "error",
+                "message" => "No Data"
+            ];
+        }
+        print(json_encode($result));
+    } catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+});
+
+
+$app->get('/video', function () use ($app) {
+    try {
+        $app->response->headers->set('Content-Type', 'application/json');
+        $approved = "APPROVED" ;
+        $allVideo = Post::select('id','post_title', 'video_src')->where('post_status',$approved)->orderBy('updated_at', 'desc')->get();
+        if ($allVideo) {
+            $result = [
+                "status" => "success",
+                "data" => json_decode($allVideo->toJson())
+            ];
+        } else {
+            $result = [
+                "status" => "error",
+                "message" => "No Data"
+            ];
+        }
+        print(json_encode($result));
+    } catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+});
+
+$app->get('/pending/video', function () use ($app) {
+    try {
+        $app->response->headers->set('Content-Type', 'application/json');
+        $approved = "PENDING";
+        $allVideo = Post::select('id','post_title', 'video_src')->where('post_status',$approved)->orderBy('updated_at', 'desc')->get();
+        if ($allVideo) {
+            $result = [
+                "status" => "success",
+                "data" => json_decode($allVideo->toJson())
+            ];
         } else {
             $result = [
                 "status" => "error",
@@ -165,6 +292,31 @@ $app->post('/create/news/comment', function () use ($app) {
     }
 });
 
+$app->post('/create/post/comment', function () use ($app) {
+    try {
+        $app->response->headers->set('Content-Type', 'application/json');
+        $json = $app->request->getBody();
+        $allPostVars = json_decode($json, true); // parse the JSON into an associative array
+        $comment = new PostComment;
+        $comment->user_id = $allPostVars['user_id'];
+        $comment->post_id = $allPostVars['post_id'];
+        $comment->comment = $allPostVars['comment'];
+        if (($comment->save()) > 0) {
+            $result = [
+                "status" => "success",
+                "message" => "Comment Added"
+            ];
+            print(json_encode($result));
+        };
+    } catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+});
+
 $app->get('/events', function () use ($app) {
     try {
         $app->response->headers->set('Content-Type', 'application/json');
@@ -196,7 +348,7 @@ $app->get('/upcoming/events', function () use ($app) {
     try {
         $app->response->headers->set('Content-Type', 'application/json');
         //print_r(date("Y-m-d"));
-        $events = Event::where('schedule_start','>',date("Y-m-d"))->get();
+        $events = Event::where('schedule_start', '>', date("Y-m-d",time()))->get();
 
         if ($events) {
             $result = [
@@ -224,7 +376,7 @@ $app->get('/live/events', function () use ($app) {
     try {
         $app->response->headers->set('Content-Type', 'application/json');
         //print_r(date("Y-m-d"));
-        $events = Event::where('schedule_start','=',date("Y-m-d"))->get();
+        $events = Event::where('schedule_start', '=', date("Y-m-d",time()))->get();
 
         if ($events) {
             $result = [
@@ -276,13 +428,48 @@ $app->post('/create/event', function () use ($app) {
     }
 });
 
+$app->post('/create/post', function () use ($app) {
+    try {
+        $app->response->headers->set('Content-Type', 'application/json');
+        $json = $app->request->getBody();
+        $allPostVars = json_decode($json, true); // parse the JSON into an associative array
+        $post = new Post;
+        $post->post_title = $allPostVars['post_title'];
+        $post->video_src = $allPostVars['video_src'];
+        $post->likes = 0; //@TODO user_id need to be included too here.
+        $post->post_status = "PENDING";
+        if(isset($allPostVars['category'])){
+            $post->category = $allPostVars['category'];
+        }else{
+            $post->category = "EVENT";
+        }
+        $post->event_id = $allPostVars['event_id'];
+        $post->updated_at = date('Y-m-d', time()); //'10/16/2003'
+        $post->created_at = date('Y-m-d', time());
+        if (($post->save()) > 0) {
+            $result = [
+                "status" => "success",
+                "message" => $post
+            ];
+            print(json_encode($result));
+        };
+
+    } catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+});
+
 $app->post('/check/user', function () use ($app) {
     try {
         $app->response->headers->set('Content-Type', 'application/json');
         $result = array();
         $json = $app->request->getBody();
         $allPostVars = json_decode($json, true);
-        $data = User::where('email', $allPostVars['email'])->where('password', md5($allPostVars['password']))->first();
+        $data = User::select('id','first_name', 'last_name', 'email', 'city', 'role', 'age', 'profile')->where('email', $allPostVars['email'])->where('password', md5($allPostVars['password']))->first();
         if ($data) {
             $result["status"] = "success";
             $result["data"] = json_decode($data->toJson());
@@ -303,6 +490,93 @@ $app->post('/check/user', function () use ($app) {
 
 });
 
+$app->get('/user/exist/:email',function($email) use($app){
+    try {
+        $app->response->headers->set('Content-Type', 'application/json');
+        if (User::where('email', '=', $email)->exists()) {
+            // user found
+            $result = [
+                "status" => "success",
+                "data" => (object) User::where('email', '=', $email)->get()->first()
+            ];
+        } else {
+            $result = [
+                "status" => "error",
+                "message" => "No User Found!!!"
+            ];
+        }
+        print(json_encode($result));
+    } catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+});
+
+$app->post('/edit/role/user', function () use ($app) {
+
+    try{
+        $app->response->headers->set('Content-Type', 'application/json');
+        $json = $app->request->getBody();
+        $allPostVars = json_decode($json, true);
+        $user = User::where('id',$allPostVars['id'])->get()->first();
+        if($user){
+            $user->role = $allPostVars['role'];
+            if($user->save()>0){
+                $result = [
+                    "status" => "success",
+                    "data" => json_decode($user->toJson())
+                ];
+                print(json_encode($result));
+            }
+
+        }
+    }catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+
+});
+
+$app->post('/edit/user', function () use ($app) {
+
+    try{
+        $app->response->headers->set('Content-Type', 'application/json');
+        $json = $app->request->getBody();
+        $allPostVars = json_decode($json, true);
+        $user = User::where('id',$allPostVars['id'])->get()->first();
+        if($user){
+            $user->first_name = $allPostVars['first_name'];
+            $user->last_name = $allPostVars['last_name'];
+            $user->city = $allPostVars['city'];
+            $user->age = $allPostVars['age'];
+            if(isset($allPostVars['profile'])){
+                $user->profile = $allPostVars['profile'];
+            }
+            if($user->save()>0){
+                $result = [
+                    "status" => "success",
+                    "data" => json_decode($user->toJson())
+                ];
+                print(json_encode($result));
+            }
+
+        }
+    }catch (Exception $error) {
+        $result = [
+            "status" => "error",
+            "message" => $error->getMessage()
+        ];
+        print(json_encode($result));
+    }
+
+});
+
 $app->post('/create/user', function () use ($app) {
 
     try {
@@ -317,12 +591,13 @@ $app->post('/create/user', function () use ($app) {
         $user->email = $allPostVars["email"];
         $user->city = $allPostVars["city"];
         $user->age = $allPostVars["age"];
+        $user->profile = $allPostVars["profile"];
         $user->role = "GENERAL";
         $user->time_stamp = date('Y-m-d H:i:s');
         if (($user->save()) > 0) {
             $result = [
                 "status" => "success",
-                "message" => "User Created"
+                "data" => json_decode($user->toJson())
             ];
             print(json_encode($result));
         };
@@ -384,7 +659,7 @@ $app->post('/upload/image', function () use ($app) {
             ];
             print(json_encode($result));
         }
-    }else{
+    } else {
         $result = [
             "status" => "error",
             "message" => "Files not uploaded!! Try Again"
@@ -397,7 +672,7 @@ $app->post('/upload/image', function () use ($app) {
 
 $app->post('/upload/video', function () use ($app, $s3, $s3_config) {
 
-    $app->response()->header("Content-Type", "application/json");
+    //$app->response()->header("Content-Type", "application/json");
 
     //echo($_FILES['uploads']['size']);
 
@@ -436,25 +711,25 @@ $app->post('/upload/video', function () use ($app, $s3, $s3_config) {
 
         $ext = strtolower($ext[1]);
         echo $ext;
-        if (move_uploaded_file($files['tmp_name'], 'uploads/videos/' . $name . '.' . $ext[1]) === true) {
-            $imgs[] = array('url' => '/uploads/videos/' . $name . '.' . $ext[1], 'name' => $files['name']);
+        if (move_uploaded_file($files['tmp_name'], 'uploads/videos/' . $name . '.' . $ext) === true) {
+            $imgs[] = array('url' => '/uploads/videos/' . $name . '.' . $ext, 'name' => $files['name']);
             $result = [
                 "status" => "success",
                 "data" => $imgs
             ];
-            try{
+            try {
                 $s3->putObject([
-                   'Bucket' => $s3_config['s3']['bucket'],
-                    'Key' => "{$files['name']}",
-                    'Body' => fopen('uploads/videos/' . $name . '.' . $ext[1],'rb'),
+                    'Bucket' => $s3_config['s3']['bucket'],
+                    'Key' => "{$name}.{$ext}",
+                    'Body' => fopen('uploads/videos/' . $name . '.' . $ext, 'rb'),
                     'ACL' => 'public-read'
                 ]);
-            }catch (\Aws\S3\Exception\S3Exception $e){
+            } catch (\Aws\S3\Exception\S3Exception $e) {
                 print($e);
             }
             print(json_encode($result));
         }
-    }else{
+    } else {
         $result = [
             "status" => "error",
             "message" => "Files not uploaded!! Try Again"
@@ -463,6 +738,65 @@ $app->post('/upload/video', function () use ($app, $s3, $s3_config) {
     }
 
 
+});
+
+$app->post('/upload',function() use ($app, $s3, $s3_config){
+    $app->response()->header("Content-Type", "application/json");
+    $allowed = array('image/png', 'image/jpeg', 'video/mp4');
+    if (!isset($_FILES['uploads'])) {
+        $result = [
+            "status" => "error",
+            "message" => "No files to upload!!"
+        ];
+        print(json_encode($result));
+        return;
+    } else if ($_FILES['uploads']['size'] > (intval(ini_get('upload_max_filesize')) * 1024 * 1024)) {
+        $result = [
+            "status" => "error",
+            "message" => "File is too long!!!"
+        ];
+        print(json_encode($result));
+        return;
+    } else if($_FILES['uploads']['name'] > 1){
+        $result = [
+            "status" => "error",
+            "message" => "Multiple  Files Upload Not Supported!!!"
+        ];
+        print(json_encode($result));
+        return;
+    } else if( (in_array($_FILES['uploads']['type'], $allowed)) && ($_FILES['uploads']['error'] === 0)){
+        $name = uniqid('vid-' . date('Ymd') . '-');
+        $ext = explode(".", $_FILES['uploads']["name"]);
+        if(move_uploaded_file($_FILES['uploads']['tmp_name'], 'uploads/' . $name .'.'. strtolower($ext[1]))){
+            try {
+                $file_ext = strtolower($ext[1]);
+                $s3_result = $s3->putObject([
+                    'Bucket' => $s3_config['s3']['bucket'],
+                    'Key' => "{$name}.{$file_ext}",
+                    'Body' => fopen('uploads/' . $name . '.' .$file_ext, 'rb'),
+                    'ACL' => 'public-read'
+                ]);
+                $result = [
+                    "status" => "success",
+                    "message" => array("url"=>$s3_result['ObjectURL'],"file_type"=>$_FILES['uploads']['type'])
+                ];
+                print(json_encode($result));
+                unlink('uploads/' . $name . '.' .$file_ext);
+            } catch (\Aws\S3\Exception\S3Exception $e) {
+                $result = [
+                    "status" => "error",
+                    "message" => $e->getMessage()
+                ];
+                print(json_encode($result));
+            }
+        };
+    } else{
+        $result = [
+            "status" => "error",
+            "message" => "Unsupported File Format"
+        ];
+        print(json_encode($result));
+    }
 });
 
 $app->run();
