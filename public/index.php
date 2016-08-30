@@ -13,9 +13,12 @@ $s3_config = require('../app/s3_config.php');
 print($s3_config['s3']['secret']);
 print($s3_config['s3']['bucket']);*/
 
-$s3 = S3Client::factory([
+
+$s3 = new S3Client([
     'key' => $s3_config['s3']['key'],
-    'secret' => $s3_config['s3']['secret']
+    'secret' => $s3_config['s3']['secret'],
+    'version' => 'latest',
+    'region'  => 'us-west-2'
 ]);
 
 $app = new Slim\Slim();
